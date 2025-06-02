@@ -1,0 +1,462 @@
+[
+    {
+        "id": "e6d0c28f029506ba",
+        "type": "tab",
+        "label": "ProjFinal",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "39563178b49bd024",
+        "type": "mqtt in",
+        "z": "e6d0c28f029506ba",
+        "name": "Dados ESP",
+        "topic": "IPB/IoT/Projeto/Radiancia",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "41c687040607fe8a",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 130,
+        "y": 180,
+        "wires": [
+            [
+                "e0de65664984745c"
+            ]
+        ]
+    },
+    {
+        "id": "e0de65664984745c",
+        "type": "function",
+        "z": "e6d0c28f029506ba",
+        "name": "Dados ESP32",
+        "func": "let ultimaDataHora = flow.get(\"ultimaDataHora\");\nlet timestamp;\n\nif (ultimaDataHora) {\n    timestamp = new Date(ultimaDataHora).getTime();\n    \n    if (isNaN(timestamp)) {\n        timestamp = Date.now();\n    }\n} else {\n    timestamp = Date.now();\n}\n\nlet leituras_24 = flow.get(\"leituras_24\") || [];\nlet energiaTotalKW = flow.get(\"energiaTotalKW\") || 0;\n\nconst tamanhoPainelKW = 0.6;\nconst eficienciaPainel = 0.9;\nconst areaPainel = 3;\nconst qntPainel = 4;\n\nlet radiancia = Number(msg.payload);\n\nlet radkWh = (radiancia / 3600) * tamanhoPainelKW * eficienciaPainel * areaPainel * qntPainel;\n\nleituras_24.push(radkWh);\nconst max_leituras = 24;\nif (leituras_24.length > max_leituras) {\n    leituras_24.shift();\n}\nflow.set(\"leituras_24\", leituras_24);\n\nlet kW_gerado_24 = leituras_24.reduce((sum, energy) => sum + energy, 0);\n\nenergiaTotalKW += radkWh;\nflow.set(\"energiaTotalKW\", energiaTotalKW);\n\n\nlet disponibilidade = {\n    payload: energiaTotalKW.toFixed(2),\n    timestamp: timestamp\n};\n\nlet geracao_24h = {\n    payload: kW_gerado_24.toFixed(2)\n};\n\n\nlet influx_grafico24 = {\n    payload: radkWh.toFixed(2)\n};\n\n\nreturn [disponibilidade, geracao_24h, influx_grafico24];",
+        "outputs": 3,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 180,
+        "wires": [
+            [
+                "8eba80c35dc56155",
+                "1c94797a8215e803"
+            ],
+            [
+                "adc7eef8c7926694",
+                "a675b952f0712a4e"
+            ],
+            [
+                "b527a3a305430685"
+            ]
+        ]
+    },
+    {
+        "id": "adc7eef8c7926694",
+        "type": "ui_text",
+        "z": "e6d0c28f029506ba",
+        "group": "2ea1993310bd94d0",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "Geração - últimas 24hrs",
+        "format": "{{msg.payload}} kWh",
+        "layout": "row-left",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 690,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "36a5f52825ab32b6",
+        "type": "ui_numeric",
+        "z": "e6d0c28f029506ba",
+        "name": "Consumo ",
+        "label": "Consumo:",
+        "tooltip": "",
+        "group": "2ea1993310bd94d0",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "wrap": false,
+        "passthru": true,
+        "topic": "consumo",
+        "topicType": "str",
+        "format": "{{value}}",
+        "min": "0",
+        "max": "0",
+        "step": "0.01",
+        "className": "",
+        "x": 1060,
+        "y": 220,
+        "wires": [
+            [
+                "e8937a5e4e728326"
+            ]
+        ]
+    },
+    {
+        "id": "e8937a5e4e728326",
+        "type": "change",
+        "z": "e6d0c28f029506ba",
+        "name": "Consumo",
+        "rules": [
+            {
+                "t": "set",
+                "p": "consumo",
+                "pt": "flow",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1080,
+        "y": 280,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "a3b1c9aa586c03c9",
+        "type": "ui_button",
+        "z": "e6d0c28f029506ba",
+        "name": "Consumir",
+        "group": "2ea1993310bd94d0",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "label": "Aceitar Consumo",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "diminuir",
+        "topicType": "str",
+        "x": 120,
+        "y": 400,
+        "wires": [
+            [
+                "015abad320a6f7a0"
+            ]
+        ]
+    },
+    {
+        "id": "015abad320a6f7a0",
+        "type": "function",
+        "z": "e6d0c28f029506ba",
+        "name": "Consumo",
+        "func": "let disponibilidade = flow.get(\"energiaTotalKW\") || 0;\nlet consumo = flow.get(\"consumo\") || 0;\n\nconsumo = Number(consumo);\n\nlet disponibilidadeAtual;\nlet influx_consumo = null; \nlet influx_disponibilidadeAtual;\nlet msgAviso = null;\n\nif (consumo > 0) {\n    let dispAtual = disponibilidade - consumo;\n\n    if (dispAtual <= 0) {\n        msgAviso = {\n            payload: `Uso limitado!Consumo definido a ${disponibilidade.toFixed(2)} kWh.`\n        };\n        influx_consumo = {\n            payload: [{\n                measurement: \"consumo_registrado\",\n                fields: {\n                    value: disponibilidade\n                },\n                timestamp: new Date().getTime()\n            }]\n        };\n        disponibilidade = 0;\n\n\n    } else {\n        msgAviso = {\n            payload: `Consumo de ${consumo.toFixed(2)} kWh realizado.`\n        };\n        disponibilidade = dispAtual;\n        influx_consumo = {\n            payload: [{\n                measurement: \"consumo_registrado\",\n                fields: {\n                    value: consumo\n                },\n                timestamp: new Date().getTime()\n            }]\n        };\n    }\n} else {\n    msgAviso = {\n        payload: \"Insira um valor válido para consumo (maior que zero).\"\n    };\n    influx_consumo = null;\n}\n\nflow.set(\"energiaTotalKW\", disponibilidade);\n\ndisponibilidadeAtual = { payload: disponibilidade.toFixed(2) };\n\ninflux_disponibilidadeAtual = {\n    payload: [{\n        measurement: \"energia_disponivel_simulacao\",\n        fields: {\n            value: disponibilidade\n        },\n        timestamp: new Date().getTime()\n    }]\n};\n\n\nreturn [disponibilidadeAtual, influx_disponibilidadeAtual, influx_consumo, msgAviso];\n",
+        "outputs": 4,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 300,
+        "y": 400,
+        "wires": [
+            [
+                "8eba80c35dc56155",
+                "1c94797a8215e803"
+            ],
+            [
+                "bd8cea4f324564ec"
+            ],
+            [
+                "0143ad9d42d8c2e2"
+            ],
+            [
+                "fe725d1b7a68396f"
+            ]
+        ]
+    },
+    {
+        "id": "8eba80c35dc56155",
+        "type": "ui_text",
+        "z": "e6d0c28f029506ba",
+        "group": "2ea1993310bd94d0",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "name": "Disponibilidade Atual",
+        "label": "Disponibilidade Atual:",
+        "format": "{{value}} kWh",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": "16px",
+        "color": "#000000",
+        "x": 680,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "fe725d1b7a68396f",
+        "type": "ui_toast",
+        "z": "e6d0c28f029506ba",
+        "position": "top right",
+        "displayTime": "3000",
+        "highlight": "",
+        "sendall": false,
+        "outputs": 0,
+        "ok": "",
+        "cancel": "",
+        "raw": false,
+        "className": "",
+        "topic": "AVISO",
+        "name": "Aviso",
+        "x": 600,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "1c94797a8215e803",
+        "type": "function",
+        "z": "e6d0c28f029506ba",
+        "name": "Consumo max",
+        "func": "let disponibilidadeAtual = parseFloat(msg.payload);\nlet limMax = disponibilidadeAtual;\n\nif (limMax < 0) {\n    limMax = 0;\n}\n\nmsg.ui_control = {\n    max: limMax\n};\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 960,
+        "y": 160,
+        "wires": [
+            [
+                "36a5f52825ab32b6"
+            ]
+        ]
+    },
+    {
+        "id": "bd8cea4f324564ec",
+        "type": "influxdb batch",
+        "z": "e6d0c28f029506ba",
+        "influxdb": "ee2a74de36033d5f",
+        "precision": "",
+        "retentionPolicy": "",
+        "name": "Disponibilidade InfluxDB",
+        "database": "",
+        "precisionV18FluxV20": "ms",
+        "retentionPolicyV18Flux": "",
+        "org": "IPB",
+        "bucket": "Proj_Final_simu",
+        "x": 650,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "d99318ce81ba92a3",
+        "type": "influxdb batch",
+        "z": "e6d0c28f029506ba",
+        "influxdb": "ee2a74de36033d5f",
+        "precision": "",
+        "retentionPolicy": "",
+        "name": "Geracao InfluxDB",
+        "database": "",
+        "precisionV18FluxV20": "ms",
+        "retentionPolicyV18Flux": "",
+        "org": "IPB",
+        "bucket": "Proj_Final_simu",
+        "x": 890,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "0143ad9d42d8c2e2",
+        "type": "influxdb batch",
+        "z": "e6d0c28f029506ba",
+        "influxdb": "ee2a74de36033d5f",
+        "precision": "",
+        "retentionPolicy": "",
+        "name": "Consumo InfluxDB",
+        "database": "",
+        "precisionV18FluxV20": "ms",
+        "retentionPolicyV18Flux": "",
+        "org": "IPB",
+        "bucket": "Proj_Final_simu",
+        "x": 630,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "ae61f8f865710fbc",
+        "type": "mqtt in",
+        "z": "e6d0c28f029506ba",
+        "name": "Dados API",
+        "topic": "IPB/IoT/Projeto/DataHora",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "41c687040607fe8a",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 120,
+        "y": 300,
+        "wires": [
+            [
+                "1057cf495f816513"
+            ]
+        ]
+    },
+    {
+        "id": "1057cf495f816513",
+        "type": "function",
+        "z": "e6d0c28f029506ba",
+        "name": "Registro DataHora",
+        "func": "flow.set(\"ultimaDataHora\", msg.payload);\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 300,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "a675b952f0712a4e",
+        "type": "function",
+        "z": "e6d0c28f029506ba",
+        "name": "Geracao_24h Influx",
+        "func": "let dados = JSON.parse(msg.payload);\n\nmsg.payload = [\n    {\n        measurement: \"geracao_24h\",\n        fields: {\n            geracao: dados,\n        },\n    }\n];\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 670,
+        "y": 220,
+        "wires": [
+            [
+                "7d40b2d1e4f56c9c"
+            ]
+        ]
+    },
+    {
+        "id": "7d40b2d1e4f56c9c",
+        "type": "influxdb batch",
+        "z": "e6d0c28f029506ba",
+        "influxdb": "ee2a74de36033d5f",
+        "precision": "",
+        "retentionPolicy": "",
+        "name": "Geracao_24h",
+        "database": "database",
+        "precisionV18FluxV20": "ms",
+        "retentionPolicyV18Flux": "",
+        "org": "IPB",
+        "bucket": "Proj_Final_simu",
+        "x": 880,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "b527a3a305430685",
+        "type": "function",
+        "z": "e6d0c28f029506ba",
+        "name": "Geracao_hora Influx",
+        "func": "let dados = JSON.parse(msg.payload);\n\nmsg.payload = [\n    {\n        measurement: \"geracao_estacao_simulacao\",\n        fields: {\n            geracaohora: dados,\n        },\n    }\n];\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 680,
+        "y": 260,
+        "wires": [
+            [
+                "d99318ce81ba92a3"
+            ]
+        ]
+    },
+    {
+        "id": "41c687040607fe8a",
+        "type": "mqtt-broker",
+        "name": "broker.emqx.io",
+        "broker": "broker.emqx.io",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "2ea1993310bd94d0",
+        "type": "ui_group",
+        "name": "ProjFinal_Simulação",
+        "tab": "32547dc03b9ced57",
+        "order": 1,
+        "disp": true,
+        "width": "8",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "ee2a74de36033d5f",
+        "type": "influxdb",
+        "hostname": "127.0.0.1",
+        "port": 8086,
+        "protocol": "http",
+        "database": "database",
+        "name": "InfluxDB2",
+        "usetls": false,
+        "tls": "",
+        "influxdbVersion": "2.0",
+        "url": "http://localhost:8086",
+        "timeout": 10,
+        "rejectUnauthorized": true
+    },
+    {
+        "id": "32547dc03b9ced57",
+        "type": "ui_tab",
+        "name": "ProjFinal",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
+    }
+]
